@@ -1,0 +1,25 @@
+name: Primer inicio de sesión en Garmin
+
+# Solo para cuentas de Garmin SIN verificación en dos pasos.
+# Si tienes la verificación activada, ejecuta sync/garmin_login.py en tu ordenador.
+on:
+  workflow_dispatch:
+
+jobs:
+  login:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+      SELF_USER_ID: ${{ secrets.SELF_USER_ID }}
+      GARMIN_EMAIL: ${{ secrets.GARMIN_EMAIL }}
+      GARMIN_PASSWORD: ${{ secrets.GARMIN_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r sync/requirements.txt
+      - name: Iniciar sesión y guardar los tokens en Supabase
+        working-directory: sync
+        run: python garmin_login.py < /dev/null

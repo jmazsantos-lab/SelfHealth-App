@@ -1,0 +1,49 @@
+name: Sincronizar datos
+
+on:
+  schedule:
+    - cron: "10 9 * * *"    # 05:10 en La Habana (hora de verano) / 04:10 (invierno)
+    - cron: "10 16 * * *"   # 12:10 / 11:10: recoge lo sincronizado durante la mañana
+  workflow_dispatch:
+    inputs:
+      days:
+        description: "Días a sincronizar (120 para la carga inicial)"
+        default: "3"
+        required: true
+      refresh:
+        description: "Volver a descargar el detalle de las actividades"
+        type: boolean
+        default: false
+
+concurrency:
+  group: self-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+      SELF_USER_ID: ${{ secrets.SELF_USER_ID }}
+      GARMINTOKENS: ${{ secrets.GARMINTOKENS }}
+      SELF_TZ: America/Havana
+      SELF_LAT: "23.1367"
+      SELF_LON: "-82.3830"
+      DAYS: ${{ github.event.inputs.days || '3' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: sync/requirements.txt
+      - run: pip install -r sync/requirements.txt
+      - name: Garmin Connect
+        working-directory: sync
+        run: python garmin_sync.py --days "$DAYS" ${{ github.event.inputs.refresh == 'true' && '--refresh-details' || '' }}
+      - name: Clima
+        if: always()
+        working-directory: sync
+        run: python weather_sync.py --days "$DAYS"
