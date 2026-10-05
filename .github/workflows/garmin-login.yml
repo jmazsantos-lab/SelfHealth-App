@@ -1,19 +1,26 @@
 name: Primer inicio de sesión en Garmin
 
-# Solo para cuentas de Garmin SIN verificación en dos pasos.
-# Si tienes la verificación activada, ejecuta sync/garmin_login.py en tu ordenador.
+# Funciona desde el iPad o el iPhone, también con verificación en dos pasos.
+# Si Garmin pide un código, se abre una incidencia en la pestaña Issues:
+# responde en ella con el código que te llegue por correo.
 on:
   workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
 
 jobs:
   login:
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     env:
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
       SELF_USER_ID: ${{ secrets.SELF_USER_ID }}
       GARMIN_EMAIL: ${{ secrets.GARMIN_EMAIL }}
       GARMIN_PASSWORD: ${{ secrets.GARMIN_PASSWORD }}
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
