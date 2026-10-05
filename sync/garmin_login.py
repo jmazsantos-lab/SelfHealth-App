@@ -85,6 +85,10 @@ def main() -> None:
     if not email or not password:
         sys.exit("Faltan los secretos GARMIN_EMAIL y GARMIN_PASSWORD.")
 
+    if os.getenv("SUPABASE_SERVICE_KEY"):
+        from common import check_service_key
+        check_service_key(os.environ["SUPABASE_SERVICE_KEY"])  # antes de pedir código a Garmin
+
     prompt = code_from_github_issue if in_actions else (lambda: input("Código de verificación: ").strip())
     api = Garmin(email, password, prompt_mfa=prompt)
     api.login()

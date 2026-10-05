@@ -75,6 +75,23 @@ def first(data, *keys):
     return None
 
 
+def check_service_key(key: str) -> None:
+    """Detecta el error más habitual: poner la clave pública en lugar de la secreta."""
+    if key.startswith("sb_publishable_"):
+        sys.exit("El secreto SUPABASE_SERVICE_KEY contiene la clave pública (sb_publishable_…). "
+                 "Sustitúyelo por la clave secreta (sb_secret_…) de Supabase → Project Settings → API Keys.")
+    if key.startswith("eyJ"):
+        import base64
+        try:
+            part = key.split(".")[1]
+            role = json.loads(base64.urlsafe_b64decode(part + "=" * (-len(part) % 4))).get("role")
+        except Exception:
+            role = None
+        if role and role != "service_role":
+            sys.exit(f"El secreto SUPABASE_SERVICE_KEY contiene la clave «{role}». "
+                     "Sustitúyelo por la clave service_role (o la nueva sb_secret_…) de Supabase → Project Settings → API Keys.")
+
+
 class Supabase:
     """Cliente REST mínimo con la clave de servicio."""
 
@@ -82,12 +99,13 @@ class Supabase:
         self.url = env("SUPABASE_URL").rstrip("/")
         self.key = env("SUPABASE_SERVICE_KEY")
         self.user_id = env("SELF_USER_ID")
+        check_service_key(self.key)
         self.s = requests.Session()
-        self.s.headers.update({
-            "apikey": self.key,
-            "Authorization": f"Bearer {self.key}",
-            "Content-Type": "application/json",
-        })
+        headers = {"apikey": self.key, "Content-Type": "application/json"}
+        # Las claves antiguas (JWT) van también en Authorization; las nuevas (sb_secret_…) solo en apikey
+        if not self.key.startswith("sb_"):
+            headers["Authorization"] = f"Bearer {self.key}"
+        self.s.headers.update(headers)
 
     def upsert(self, table: str, rows: list[dict], on_conflict: str) -> int:
         if not rows:
